@@ -1,0 +1,145 @@
+# -----------------------------------------------------------------------------
+# 'shell' service is used to open a bash shell.
+#
+# Usage:
+#   docker-compose run --rm bash
+# -----------------------------------------------------------------------------
+shell-dev:
+  build: .
+  user: appuser
+  dockerfile: dockerfiles/Dockerfile
+  volumes:
+    - .:/app
+  command: bash
+  links:
+    - postgresql-dev:postgresql_dev
+  environment:
+    - ENVIRONMENT=development
+    - ALLOWED_HOSTS=*
+    - POSTGRESQL_HOST=postgresql_dev
+    - POSTGRESQL_PORT=5432
+    - POSTGRESQL_USER=postgres
+    - POSTGRESQL_PASSWORD=development
+    - POSTGRESQL_DATABASE=website_dev
+# -----------------------------------------------------------------------------
+# 'server-dev' service is used to run the development server
+#
+# Usage:
+#   docker-compose run --rm server-dev
+# -----------------------------------------------------------------------------
+server-dev:
+  build: .
+  user: appuser
+  dockerfile: dockerfiles/Dockerfile
+  volumes:
+    - .:/app
+  ports:
+    - "8080:8080"
+  links:
+    - postgresql-dev:postgresql_dev
+  environment:
+    - ENVIRONMENT=development
+    - ALLOWED_HOSTS=*
+    - POSTGRESQL_HOST=postgresql_dev
+    - POSTGRESQL_PORT=5432
+    - POSTGRESQL_USER=postgres
+    - POSTGRESQL_PASSWORD=development
+    - POSTGRESQL_DATABASE=website_dev
+
+
+# -----------------------------------------------------------------------------
+# 'server-dev' service is used to run the development server
+#
+# Usage:
+#   docker-compose run --rm server-dev
+# -----------------------------------------------------------------------------
+server-prod:
+  build: .
+  user: root
+  dockerfile: dockerfiles/Dockerfile
+  volumes:
+    - .:/app
+  ports:
+    - "8000:8000"
+  links:
+    - postgresql-dev:postgresql_dev
+  environment:
+    - ENVIRONMENT=production
+    - ALLOWED_HOSTS=*
+    - POSTGRESQL_HOST=postgresql_dev
+    - POSTGRESQL_PORT=5432
+    - POSTGRESQL_USER=postgres
+    - POSTGRESQL_PASSWORD=development
+    - POSTGRESQL_DATABASE=website_dev
+
+# -----------------------------------------------------------------------------
+# 'lint' service is used to check for any linting or type checking errors
+#
+# Usage:
+#   docker-compose run --rm lint
+# -----------------------------------------------------------------------------
+lint:
+  build: .
+  user: appuser
+  dockerfile: dockerfiles/Dockerfile_tests
+  volumes:
+    - .:/app
+  command: bash -c "black /app/app --check && pycodestyle /app/app --config=pycodestyle.cfg"
+
+# -----------------------------------------------------------------------------
+# 'lint-fix' service is used to fix linting using the black package
+#
+# Usage:
+#   docker-compose run --rm lint
+# -----------------------------------------------------------------------------
+lint-fix:
+  build: .
+  user: appuser
+  dockerfile: dockerfiles/Dockerfile_tests
+  volumes:
+    - .:/app
+  command: bash -c "black /app/app"
+
+# -----------------------------------------------------------------------------
+# 'pip-compile' service is used to add new packages listed in requirements*.in.
+#
+# Usage:
+#   docker-compose run --rm pip-compile
+# -----------------------------------------------------------------------------
+pip-compile:
+  build: .
+  dockerfile: dockerfiles/Dockerfile_pip_compile
+  entrypoint: []
+  user: appuser
+  volumes:
+    - .:/app
+  command: >
+    bash --login -c "
+      pip-compile --output-file requirements.txt requirements.in &&
+      pip-compile --output-file requirements_test.txt requirements_test.in"
+# -----------------------------------------------------------------------------
+# 'pip-compile-upgrade-requirements' service is used to upgrade packages
+# located in requirements*.in.
+#
+# Usage:
+#   UPGRADE_PACKAGE=<package_name> docker-compose run --rm pip-compile-upgrade-requirements
+# -----------------------------------------------------------------------------
+pip-compile-upgrade-requirements:
+  extends:
+    service: pip-compile
+  command: >
+    bash --login -c "
+      pip-compile --upgrade-package $UPGRADE_PACKAGE --output-file requirements.txt requirements.in &&
+      pip-compile --upgrade-package $UPGRADE_PACKAGE --output-file requirements_test.txt requirements_test.in"
+
+
+# -----------------------------------------------------------------------------
+# 'postgresql-dev' service is used to provide server-dev with a database
+# -----------------------------------------------------------------------------
+postgresql-dev:
+  image: postgres:9.6
+  volumes:
+    - ./tmp/postgresql:/var/lib/postgresql/data
+  environment:
+    POSTGRES_DB: website_dev
+    POSTGRES_PASSWORD: development

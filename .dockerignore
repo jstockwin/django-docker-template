@@ -1,0 +1,6 @@
+static_prod
+*.sqlite3
+*.sock
+tmp
+.secrets
+yourproject.log

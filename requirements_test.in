@@ -1,0 +1,6 @@
+# Include the production requirements to prevent package duplication
+-r requirements.in
+
+black
+nose
+pycodestyle

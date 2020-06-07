@@ -1,0 +1,6 @@
+django
+django-health-check
+django-pipeline
+libsass
+psycopg2
+uwsgi
